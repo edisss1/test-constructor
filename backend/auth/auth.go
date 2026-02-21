@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
@@ -14,6 +13,8 @@ import (
 )
 
 func Login(c *gin.Context) {
+
+	// getting credentials
 	var credentials struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -26,22 +27,26 @@ func Login(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// getting user from the database
 	collection := db.DB.Collection("users")
 	filter := bson.M{"email": credentials.Email}
 	var user structs.User
 
+	// checking if user exists
 	err := collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials " + err.Error()})
 		return
 	}
 
+	// checking if password hash matches the password provided
 	err = CheckPasswordHash(user.Password, credentials.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials " + err.Error()})
 		return
 	}
 
+	// generating JWT
 	token, err := GenerateToken(user.ID)
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
@@ -52,12 +57,14 @@ func SignUp(c *gin.Context) {
 
 	collection := db.DB.Collection("users")
 
+	// getting user data
 	var user structs.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// hashing password and setting createdAt
 	hashedPassword := HashPassword(user.Password)
 	user.Password = hashedPassword
 	user.CreatedAt = time.Now()
@@ -65,6 +72,7 @@ func SignUp(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// inserting user into the database
 	_, err := collection.InsertOne(ctx, user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
@@ -75,34 +83,31 @@ func SignUp(c *gin.Context) {
 
 }
 
+// GetCurrentUser returns the current logged in user
 func GetCurrentUser(c *gin.Context) {
+	// getting user ID from the context
 	userID, exists := c.Get("id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized in user check"})
 		return
 	}
 
-	log.Printf("Raw userID from context: %v (type: %T)", userID, userID)
-
+	// converting userID to ObjectID
 	objID, ok := userID.(primitive.ObjectID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID type"})
 		return
 	}
-	log.Printf("ObjectID: %v (hex: %s)", objID, objID.Hex())
 
+	// getting user from the database
 	collection := db.DB.Collection("users")
 	var user structs.User
 	filter := bson.M{"_id": objID}
-	log.Printf("Filter: %v", filter)
 
 	if err := collection.FindOne(context.Background(), filter).Decode(&user); err != nil {
-		log.Printf("Database error: %v", err)
-		log.Printf("ID: %v", objID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User doesn't exist: " + err.Error()})
 		return
 	}
 
-	log.Printf("Found user: %+v", user)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }

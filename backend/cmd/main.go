@@ -6,6 +6,7 @@ import (
 
 	"github.com/edisss1/test-constructor/auth"
 	"github.com/edisss1/test-constructor/db"
+	"github.com/edisss1/test-constructor/test"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -26,9 +27,13 @@ func main() {
 		})
 	})
 
+	// auth and user data
 	r.POST("/login", auth.Login)
 	r.POST("/signup", auth.SignUp)
 	r.GET("/me", auth.AuthMiddleware(), auth.GetCurrentUser)
+
+	// tests
+	r.POST("/tests", auth.AuthMiddleware(), test.CreateTest)
 
 	if err := r.Run(); err != nil {
 		log.Fatalf("failed to run server: %v", err)
