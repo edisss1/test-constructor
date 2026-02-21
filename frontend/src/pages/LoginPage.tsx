@@ -10,6 +10,7 @@ const LoginPage = () => {
     return (
         <div className="min-h-screen flex justify-center items-center">
             <div className="w-full max-w-62.5 flex flex-col gap-4 items-center">
+                <h1 className="text-3xl font-semibold">Login</h1>
                 <form className="w-full flex flex-col gap-4">
                     <Input
                         type="email"

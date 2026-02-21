@@ -11,7 +11,7 @@ const Input = ({ type, placeholder, value, onChange, label }: InputProps) => {
         <div className="flex flex-col gap-2 w-full">
             {label && <label>{label}</label>}
             <input
-                className="border-2 border-text rounded-lg px-2 py-1"
+                className="border-2 border-text rounded-lg p-2"
                 type={type}
                 placeholder={placeholder}
                 value={value}
