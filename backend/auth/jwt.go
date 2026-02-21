@@ -15,7 +15,14 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(id bson.ObjectID) (string, error) {
+type RefreshTokenClaims struct {
+	ID        bson.ObjectID `bson:"_id,omitempty"`
+	UserID    bson.ObjectID `bson:"userID"`
+	Token     string        `bson:"token"`
+	ExpiresAt time.Time
+}
+
+func GenerateAccessToken(id bson.ObjectID) (string, error) {
 	jwtSecret := []byte(os.Getenv("JWT_KEY"))
 
 	claims := Claims{
@@ -28,6 +35,40 @@ func GenerateToken(id bson.ObjectID) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
+}
+
+func GenerateRefreshToken(id bson.ObjectID) (string, error) {
+	jwtSecret := []byte(os.Getenv("JWT_REFRESH_KEY"))
+
+	claims := Claims{
+		ID: id,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 30)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return refreshToken.SignedString(jwtSecret)
+}
+
+func ValidateToken(tokenString string) (*Claims, error) {
+	jwtSecret := []byte(os.Getenv("JWT_KEY"))
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, err
+	}
+
+	return claims, nil
 }
 
 func AuthMiddleware() gin.HandlerFunc {

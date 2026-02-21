@@ -31,6 +31,8 @@ func main() {
 	r.POST("/login", auth.Login)
 	r.POST("/signup", auth.SignUp)
 	r.GET("/me", auth.AuthMiddleware(), auth.GetCurrentUser)
+	r.POST("/refresh", auth.AuthMiddleware(), auth.Refresh)
+	r.POST("/logout", auth.AuthMiddleware(), auth.Logout)
 
 	// tests
 	r.POST("/tests", auth.AuthMiddleware(), test.CreateTest)

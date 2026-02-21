@@ -47,9 +47,25 @@ func Login(c *gin.Context) {
 	}
 
 	// generating JWT
-	token, err := GenerateToken(user.ID)
+	accessToken, _ := GenerateAccessToken(user.ID)
+	refreshToken, _ := GenerateRefreshToken(user.ID)
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	refresh := RefreshTokenClaims{
+		UserID:    user.ID,
+		Token:     refreshToken,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
+	}
+
+	// storing refresh token in the db
+	_, err = db.DB.Collection("refresh-tokens").InsertOne(ctx, refresh)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert token"})
+		return
+	}
+
+	c.SetCookie("refreshToken", refreshToken, int(time.Hour*24*30), "/", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{"token": accessToken})
 
 }
 
@@ -81,6 +97,81 @@ func SignUp(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 
+}
+
+func Refresh(c *gin.Context) {
+	// getting refresh token from cookie
+	refreshToken, err := c.Cookie("refreshToken")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No refresh token"})
+		return
+	}
+
+	// validating refresh token
+	claims, err := ValidateToken(refreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	collection := db.DB.Collection("refresh-tokens")
+	var stored RefreshTokenClaims
+	filter := bson.M{"token": refreshToken}
+
+	err = collection.FindOne(ctx, filter).Decode(&stored)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		return
+	}
+
+	// rotating refresh token
+	_, err = collection.DeleteOne(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting refresh token " + err.Error()})
+	}
+
+	// creating new tokens
+	newRefreshToken, err := GenerateRefreshToken(claims.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token " + err.Error()})
+	}
+	newAccessToken, err := GenerateAccessToken(claims.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating access token " + err.Error()})
+	}
+
+	// storing new refresh token in cookie
+	c.SetCookie("refreshToken", newRefreshToken, int(time.Hour*24*30), "/", "", false, true)
+
+	// sending new access token
+	c.JSON(http.StatusOK, gin.H{"token": newAccessToken})
+
+}
+
+func Logout(c *gin.Context) {
+	refreshToken, err := c.Cookie("refreshToken")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No refresh token"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	collection := db.DB.Collection("refresh-tokens")
+	filter := bson.M{"token": refreshToken}
+
+	// deleting refresh token from cookie and db
+	c.SetCookie("refreshToken", "", -1, "/", "", false, true)
+	_, err = collection.DeleteOne(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting refresh token " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
 // GetCurrentUser returns the current logged in user
