@@ -5,12 +5,15 @@ import { HashRouter } from "react-router"
 import { Provider } from "react-redux"
 import { store } from "./redux/store.ts"
 import Router from "./Router.tsx"
+import { AuthProvider } from "./components/Auth/AuthProvider.tsx"
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <HashRouter>
             <Provider store={store}>
-                <Router />
+                <AuthProvider>
+                    <Router />
+                </AuthProvider>
             </Provider>
         </HashRouter>
     </StrictMode>

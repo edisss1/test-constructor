@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -54,7 +55,7 @@ func GenerateRefreshToken(id bson.ObjectID) (string, error) {
 }
 
 func ValidateToken(tokenString string) (*Claims, error) {
-	jwtSecret := []byte(os.Getenv("JWT_KEY"))
+	jwtSecret := []byte(os.Getenv("JWT_REFRESH_KEY"))
 
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
@@ -96,7 +97,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(*Claims); ok {
-
+			log.Printf("ID from middleware: %v", claims.ID)
 			c.Set("id", claims.ID)
 			c.Next()
 		} else {

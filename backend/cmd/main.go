@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
-	"net/http"
+	"time"
 
 	"github.com/edisss1/test-constructor/auth"
 	"github.com/edisss1/test-constructor/db"
 	"github.com/edisss1/test-constructor/test"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -21,18 +22,26 @@ func main() {
 
 	r := gin.Default()
 
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           24 * time.Hour,
+	}))
+
+	routeGroup := r.Group("/api")
+
+	routeGroup.Use(auth.AuthMiddleware())
 
 	// auth and user data
 	r.POST("/login", auth.Login)
 	r.POST("/signup", auth.SignUp)
-	r.GET("/me", auth.AuthMiddleware(), auth.GetCurrentUser)
-	r.POST("/refresh", auth.AuthMiddleware(), auth.Refresh)
-	r.POST("/logout", auth.AuthMiddleware(), auth.Logout)
+	r.POST("/logout", auth.Logout)
+	routeGroup.GET("/refresh", auth.Refresh)
+
+	routeGroup.GET("/me", auth.GetCurrentUser)
 
 	// tests
 	r.POST("/tests", auth.AuthMiddleware(), test.CreateTest)

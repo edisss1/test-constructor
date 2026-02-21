@@ -2,13 +2,13 @@ package auth
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/edisss1/test-constructor/db"
 	"github.com/edisss1/test-constructor/structs"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -49,6 +49,9 @@ func Login(c *gin.Context) {
 	// generating JWT
 	accessToken, _ := GenerateAccessToken(user.ID)
 	refreshToken, _ := GenerateRefreshToken(user.ID)
+
+	// TODO: remove this
+	log.Printf("Access token: %v, Refresh token: %v", accessToken, refreshToken)
 
 	refresh := RefreshTokenClaims{
 		UserID:    user.ID,
@@ -184,7 +187,8 @@ func GetCurrentUser(c *gin.Context) {
 	}
 
 	// converting userID to ObjectID
-	objID, ok := userID.(primitive.ObjectID)
+	objID, ok := userID.(bson.ObjectID)
+	log.Printf("User ID: %v", objID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID type"})
 		return
