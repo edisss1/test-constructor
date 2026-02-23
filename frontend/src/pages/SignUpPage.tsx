@@ -2,14 +2,19 @@ import { Link } from "react-router"
 import Button from "../components/UI/Button"
 import Input from "../components/UI/Input"
 import { useState } from "react"
+import EyeOpenIcon from "../assets/icons/EyeOpenIcon"
+import EyeClosedIcon from "../assets/icons/EyeClosedIcon"
 
-const LoginPage = () => {
+const SignUpPage = () => {
+    const [userName, setUserName] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [confirmedPassword, setConfirmedPassword] = useState("")
+    const [isShowPassword, setIsShowPassword] = useState(false)
 
     return (
         <div className="min-h-screen flex justify-center items-center">
-            <div className="w-full max-w-62.5 flex flex-col gap-4 items-center">
+            <div className="w-full max-w-75 flex flex-col gap-4 items-center">
                 <h1 className="text-3xl font-semibold">Sign Up</h1>
 
                 <form className="w-full flex flex-col gap-4">
@@ -17,8 +22,8 @@ const LoginPage = () => {
                         type="text"
                         placeholder="e.g. John Doe"
                         label="Name"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
                     />
                     <Input
                         type="email"
@@ -29,19 +34,26 @@ const LoginPage = () => {
                     />
 
                     <Input
-                        type="password"
+                        type={isShowPassword ? "text" : "password"}
+                        onClick={
+                            isShowPassword
+                                ? () => setIsShowPassword(false)
+                                : () => setIsShowPassword(true)
+                        }
                         placeholder="Enter your password"
                         label="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        icon={
+                            isShowPassword ? <EyeClosedIcon /> : <EyeOpenIcon />
+                        }
                     />
-
                     <Input
-                        type="password"
+                        type={isShowPassword ? "text" : "password"}
                         placeholder="Confirm your password"
                         label="Confirmed password"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={confirmedPassword}
+                        onChange={(e) => setConfirmedPassword(e.target.value)}
                     />
                     <Button type="submit">Sign Up</Button>
                 </form>
@@ -55,4 +67,4 @@ const LoginPage = () => {
         </div>
     )
 }
-export default LoginPage
+export default SignUpPage

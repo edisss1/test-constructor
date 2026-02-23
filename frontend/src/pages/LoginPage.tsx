@@ -1,25 +1,29 @@
-import { Link } from "react-router"
+import { Link, useNavigate } from "react-router"
 import Button from "../components/UI/Button"
 import Input from "../components/UI/Input"
 import { useState } from "react"
 import { useAuth } from "../components/Auth/AuthProvider"
+import EyeClosedIcon from "../assets/icons/EyeClosedIcon"
+import EyeOpenIcon from "../assets/icons/EyeOpenIcon"
 
 const LoginPage = () => {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [isShowPassword, setIsShowPassword] = useState(false)
     const { login } = useAuth()
+    const navigate = useNavigate()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
-        await login(email, password)
+        await login(email, password).then(() => navigate("/dashboard"))
         setEmail("")
         setPassword("")
     }
 
     return (
         <div className="min-h-screen flex justify-center items-center">
-            <div className="w-full max-w-62.5 flex flex-col gap-4 items-center">
+            <div className="w-full max-w-75 flex flex-col gap-4 items-center">
                 <h1 className="text-3xl font-semibold">Login</h1>
                 <form
                     onSubmit={handleSubmit}
@@ -34,11 +38,23 @@ const LoginPage = () => {
                     />
                     <div className="w-full grid gap-2">
                         <Input
-                            type="password"
+                            type={isShowPassword ? "text" : "password"}
+                            onClick={
+                                isShowPassword
+                                    ? () => setIsShowPassword(false)
+                                    : () => setIsShowPassword(true)
+                            }
                             placeholder="Enter your password"
                             label="Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            icon={
+                                isShowPassword ? (
+                                    <EyeClosedIcon />
+                                ) : (
+                                    <EyeOpenIcon />
+                                )
+                            }
                         />
                         <Link className="text-sm" to={"/"}>
                             Forgot Password?
