@@ -39,8 +39,7 @@ func main() {
 	r.POST("/login", auth.Login)
 	r.POST("/signup", auth.SignUp)
 	r.POST("/logout", auth.Logout)
-	routeGroup.GET("/refresh", auth.Refresh)
-
+	r.GET("/refresh", auth.Refresh)
 	routeGroup.GET("/me", auth.GetCurrentUser)
 
 	// tests

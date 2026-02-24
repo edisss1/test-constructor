@@ -47,11 +47,17 @@ func Login(c *gin.Context) {
 	}
 
 	// generating JWT
-	accessToken, _ := GenerateAccessToken(user.ID)
-	refreshToken, _ := GenerateRefreshToken(user.ID)
+	accessToken, err := GenerateAccessToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		return
+	}
 
-	// TODO: remove this
-	log.Printf("Access token: %v, Refresh token: %v", accessToken, refreshToken)
+	refreshToken, err := GenerateRefreshToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		return
+	}
 
 	refresh := RefreshTokenClaims{
 		UserID:    user.ID,
@@ -68,7 +74,7 @@ func Login(c *gin.Context) {
 
 	c.SetCookie("refreshToken", refreshToken, int(time.Hour*24*30), "/", "", false, true)
 
-	c.JSON(http.StatusOK, gin.H{"token": accessToken})
+	c.JSON(http.StatusOK, gin.H{"token": accessToken, "user": user})
 
 }
 
@@ -130,17 +136,20 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	// rotating refresh token
-	_, err = collection.DeleteOne(ctx, filter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting refresh token " + err.Error()})
-	}
-
 	// creating new tokens
 	newRefreshToken, err := GenerateRefreshToken(claims.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token " + err.Error()})
 	}
+
+	newRefresh := RefreshTokenClaims{
+		UserID:    stored.UserID,
+		Token:     newRefreshToken,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
+	}
+
+	_, err = collection.InsertOne(ctx, newRefresh)
+
 	newAccessToken, err := GenerateAccessToken(claims.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating access token " + err.Error()})
@@ -177,7 +186,6 @@ func Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// GetCurrentUser returns the current logged in user
 func GetCurrentUser(c *gin.Context) {
 	// getting user ID from the context
 	userID, exists := c.Get("id")

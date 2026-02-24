@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router"
+import { Link } from "react-router"
 import Button from "../components/UI/Button"
 import Input from "../components/UI/Input"
 import { useState } from "react"
@@ -11,12 +11,11 @@ const LoginPage = () => {
     const [password, setPassword] = useState("")
     const [isShowPassword, setIsShowPassword] = useState(false)
     const { login } = useAuth()
-    const navigate = useNavigate()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
-        await login(email, password).then(() => navigate("/dashboard"))
+        await login(email, password)
         setEmail("")
         setPassword("")
     }

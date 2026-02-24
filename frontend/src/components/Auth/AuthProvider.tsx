@@ -1,6 +1,13 @@
-import { createContext, useContext, useLayoutEffect, useState } from "react"
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useState
+} from "react"
 import type { User } from "../../types/User.type"
 import { api } from "../../services/api"
+import { useNavigate } from "react-router"
 
 type AuthContextType = {
     user: User | null
@@ -22,7 +29,9 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null)
     const [accessToken, setAccessToken] = useState<string | undefined>()
+    const navigate = useNavigate()
 
+    // adding access token to requests
     useLayoutEffect(() => {
         const authInterceptor = api.interceptors.request.use((config) => {
             config.headers.Authorization =
@@ -38,17 +47,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [accessToken])
 
-    useLayoutEffect(() => {
+    // refreshing token
+    useEffect(() => {
         const refreshInterceptor = api.interceptors.response.use(
             (response) => response,
             async (error) => {
                 const originalRequest = error.config as any
 
-                if (error.response.status === 401 && !originalRequest._retry) {
+                if (
+                    error.response.status === 401 &&
+                    !originalRequest._retry &&
+                    originalRequest.url !== "/refresh"
+                ) {
                     originalRequest._retry = true
                     try {
-                        const response = await api.get("/api/refresh")
+                        const response = await api.get("/refresh")
                         setAccessToken(response.data.token)
+                        console.log("Refreshed token: ", response.data.token)
 
                         originalRequest.headers.Authorization = `Bearer ${response.data.token}`
                         originalRequest._retry = true
@@ -66,6 +81,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             api.interceptors.response.eject(refreshInterceptor)
         }
     }, [])
+
+    useEffect(() => {
+        const initAuth = async () => {
+            try {
+                const res = await api.get("/refresh")
+                console.log("Token refreshed: ", res.data.token)
+                setAccessToken(res.data.token)
+
+                const userRes = await api.get("/api/me")
+                setUser(userRes.data.user as User)
+                console.log("User: ", userRes.data.user)
+            } catch {
+                setAccessToken(undefined)
+                setUser(null)
+            }
+        }
+        initAuth()
+    }, [])
+
+    useEffect(() => {
+        if (!user) return
+
+        navigate("/dashboard")
+    }, [user])
 
     const signUp = async (
         userName: string,
@@ -89,9 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log(api.getUri())
         setAccessToken(res.data.token)
 
-        const userRes = await api.get("/api/me")
-
-        setUser(userRes.data as User)
+        setUser(res.data.user as User)
     }
 
     const logout = async () => {
