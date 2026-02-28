@@ -1,8 +1,12 @@
 import { Route, Routes } from "react-router"
-import LoginPage from "./pages/LoginPage"
-import SignUpPage from "./pages/SignUpPage"
-import DashboardPage from "./pages/DashboardPage"
-import ProtectedRoute from "./components/Auth/ProtectedRoute"
+
+import { lazy } from "react"
+import NewTestPage from "./pages/NewTestPage"
+
+const LoginPage = lazy(() => import("./pages/LoginPage"))
+const SignUpPage = lazy(() => import("./pages/SignUpPage"))
+const DashboardPage = lazy(() => import("./pages/DashboardPage"))
+const ProtectedRoute = lazy(() => import("./components/Auth/ProtectedRoute"))
 
 const Router = () => {
     return (
@@ -17,6 +21,8 @@ const Router = () => {
                     </ProtectedRoute>
                 }
             />
+            <Route path="/new-test" element={<NewTestPage />} />
+            <Route path="*" element={<div>404</div>} />
         </Routes>
     )
 }

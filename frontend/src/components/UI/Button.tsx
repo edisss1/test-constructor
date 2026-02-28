@@ -20,7 +20,7 @@ const Button = ({
             className={
                 className
                     ? className
-                    : "bg-primary text-white w-full py-2 rounded-lg max-w-75 cursor-pointer disabled:opacity-50"
+                    : "bg-primary hover:opacity-80 text-white w-full py-3 rounded-lg max-w-75 cursor-pointer disabled:opacity-50 transition-opacity duration-300"
             }
             onClick={onClick}
         >

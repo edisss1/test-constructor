@@ -11,6 +11,7 @@ import { useNavigate } from "react-router"
 
 type AuthContextType = {
     user: User | null
+    isLoading: boolean
     login: (email: string, password: string) => Promise<void>
     logout: () => Promise<void>
     signUp: (userName: string, email: string, password: string) => Promise<void>
@@ -29,6 +30,8 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null)
     const [accessToken, setAccessToken] = useState<string | undefined>()
+    const [isLoading, setIsLoading] = useState(false)
+
     const navigate = useNavigate()
 
     // adding access token to requests
@@ -85,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const initAuth = async () => {
             try {
+                setIsLoading(true)
                 const res = await api.get("/refresh")
                 console.log("Token refreshed: ", res.data.token)
                 setAccessToken(res.data.token)
@@ -93,18 +97,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(userRes.data.user as User)
                 console.log("User: ", userRes.data.user)
             } catch {
+                setIsLoading(false)
                 setAccessToken(undefined)
                 setUser(null)
+            } finally {
+                setIsLoading(false)
             }
         }
         initAuth()
     }, [])
 
     useEffect(() => {
+        console.log("isLoading ", isLoading)
+    }, [isLoading])
+
+    useEffect(() => {
         if (!user) return
 
         navigate("/dashboard")
     }, [user])
+
+    const login = async (email: string, password: string) => {
+        if (email.trim() === "" || password.trim() === "") return
+
+        setIsLoading(true)
+
+        const res = await api.post("/login", { email, password })
+        console.log(api.getUri())
+        setAccessToken(res.data.token)
+
+        setUser(res.data.user as User)
+        setIsLoading(false)
+    }
 
     const signUp = async (
         userName: string,
@@ -117,18 +141,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             password.trim() === ""
         )
             return
+        setIsLoading(true)
 
-        await api.post("/signup", { userName, email, password })
-    }
+        const res = await api.post("/signup", { userName, email, password })
 
-    const login = async (email: string, password: string) => {
-        if (email.trim() === "" || password.trim() === "") return
+        if (res.data) {
+            await login(email, password)
+        }
 
-        const res = await api.post("/login", { email, password })
-        console.log(api.getUri())
-        setAccessToken(res.data.token)
-
-        setUser(res.data.user as User)
+        setIsLoading(false)
     }
 
     const logout = async () => {
@@ -138,7 +159,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, signUp }}>
+        <AuthContext.Provider
+            value={{ user, isLoading, login, logout, signUp }}
+        >
             {children}
         </AuthContext.Provider>
     )

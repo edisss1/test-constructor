@@ -4,6 +4,7 @@ import Input from "../components/UI/Input"
 import { useState } from "react"
 import EyeOpenIcon from "../assets/icons/EyeOpenIcon"
 import EyeClosedIcon from "../assets/icons/EyeClosedIcon"
+import { useAuth } from "../components/Auth/AuthProvider"
 
 const SignUpPage = () => {
     const [userName, setUserName] = useState("")
@@ -11,13 +12,28 @@ const SignUpPage = () => {
     const [password, setPassword] = useState("")
     const [confirmedPassword, setConfirmedPassword] = useState("")
     const [isShowPassword, setIsShowPassword] = useState(false)
+    const { signUp } = useAuth()
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        if (password !== confirmedPassword) return
+        e.preventDefault()
+
+        await signUp(userName, email, password).then(() => {})
+        setUserName("")
+        setEmail("")
+        setPassword("")
+        setConfirmedPassword("")
+    }
 
     return (
         <div className="min-h-screen flex justify-center items-center">
             <div className="w-full max-w-75 flex flex-col gap-4 items-center">
                 <h1 className="text-3xl font-semibold">Sign Up</h1>
 
-                <form className="w-full flex flex-col gap-4">
+                <form
+                    onSubmit={handleSubmit}
+                    className="w-full flex flex-col gap-4"
+                >
                     <Input
                         type="text"
                         placeholder="e.g. John Doe"
@@ -55,7 +71,12 @@ const SignUpPage = () => {
                         value={confirmedPassword}
                         onChange={(e) => setConfirmedPassword(e.target.value)}
                     />
-                    <Button type="submit">Sign Up</Button>
+                    <Button
+                        disabled={password !== confirmedPassword}
+                        type="submit"
+                    >
+                        Sign Up
+                    </Button>
                 </form>
                 <div className="flex gap-1">
                     <p className="text-sm">Already have an account?</p>
